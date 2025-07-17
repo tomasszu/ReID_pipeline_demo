@@ -2,10 +2,12 @@ import lancedb
 import pyarrow as pa
 import numpy as np
 import shutil
+import os
 
 class LanceDBOperator:
     def __init__(self, db_path, table_name="vehicle_features", features_size=256):
         self.db = lancedb.connect(db_path)
+        self.db_path = db_path
         self.table_name = table_name
 
         schema = pa.schema([
@@ -40,11 +42,52 @@ class LanceDBOperator:
         ]
         self.table.add(records)
 
+    def query_features(self, features_with_ids):
+        """
+        Args:
+            features_with_ids: List of tuples (vehicle_id: str/int, feature_vector: np.ndarray or list)
+        
+        Returns:
+            List of matching records from the database
+        """
+        results = []
+
+        if len(features_with_ids) == 0 or features_with_ids is None:
+            return []
+        
+        for obj_id, feature in features_with_ids:
+
+            df = self.table.search(feature) \
+                .limit(1)  \
+                .metric("Cosine") \
+                .to_list()
+            if df:
+                match_id = df[0]["vehicle_id"]
+                distance = df[0]["_distance"]
+
+                # Only consider matches within a certain distance threshold
+                # Adjust this threshold based on your requirements
+                if distance <= 0.40:
+                    results.append((obj_id, match_id, distance))
+            else:
+                print("No objects in database")
+                return []
+
+        
+        return results
+
     def delete_table(self):
-        """Permanently delete the table directory from disk."""
-        table_path = os.path.join(self.db_path, self.folder)
-        if os.path.exists(table_path):
-            shutil.rmtree(table_path)
-            print(f"Deleted table and data at: {table_path}")
-        else:
-            print(f"Table path does not exist: {table_path}")
+        """Permanently delete the table from disk."""
+
+        # drop the table from the database
+        if self.table_name in self.db.table_names():
+            self.db.drop_table(self.table_name)
+            print(f"[LanceDB] Deleted table '{self.table_name}'")
+
+        
+        # delete the database directory
+        if os.path.exists(self.db_path):
+            shutil.rmtree(self.db_path)
+            print(f"[LanceDB] Deleted database directory '{self.db_path}'")
+
+

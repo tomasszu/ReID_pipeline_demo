@@ -1,14 +1,20 @@
 import cv2
 
 class CropZoneFilter:
-    def __init__(self, frame_shape, rows=8, cols=4, y_threshold=325, debug=True):
+    def __init__(self, frame_shape, rows=None, cols=None, y_threshold=None, debug=True):
         self.rows = rows
         self.cols = cols
         self.y_threshold = y_threshold
-        self.zones = self._generate_zones(frame_shape)
-        self.zone_of_detections = {}  # id -> last seen zone
         self.debug = debug
         self._pending_crops = []  # holds (id, crop) for the current frame
+        self.zone_of_detections = {}
+
+        if self.rows is not None and self.cols is not None and self.y_threshold is not None:
+            self.zones = self._generate_zones(frame_shape)
+            self.use_zones = True
+        else:
+            self.zones = []
+            self.use_zones = False  # zone filtering disabled
 
     def _generate_zones(self, frame_shape):
         h, w = frame_shape[:2]
@@ -36,7 +42,7 @@ class CropZoneFilter:
     def _draw_debug(self, frame, center_points):
         for zone in self.zones:
             x1, y1, x2, y2 = zone
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 1)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 1)
         for center in center_points:
             cv2.circle(frame, center, 4, (0, 0, 255), -1)
 
@@ -47,7 +53,7 @@ class CropZoneFilter:
             detections: list of tuples (xyxy, class_id, conf, cls_name, tracker_id)
 
         Returns:
-            filtered_detections: list of detections (same format) that just entered a new zone
+            filtered_detections: detections that are accepted (based on zone logic or unconditionally)
         """
         self._pending_crops.clear()
         filtered = []
@@ -56,39 +62,40 @@ class CropZoneFilter:
         height, width = frame.shape[:2]
 
         for det in detections:
-            # Clamp coordinates before use
+            # Clamp and fix bbox coordinates
             x1, y1, x2, y2 = map(int, det[0])
             x1 = max(1, min(x1, width - 2))
             y1 = max(1, min(y1, height - 2))
-            x2 = max(x1 + 1, min(x2, width - 1))   # x2 must be > x1
-            y2 = max(y1 + 1, min(y2, height - 1))  # y2 must be > y1
+            x2 = max(x1 + 1, min(x2, width - 1))
+            y2 = max(y1 + 1, min(y2, height - 1))
 
-            center = (int((x1 + x2) // 2), int((y1 + y2) // 2))
+            center = ((x1 + x2) // 2, (y1 + y2) // 2)
             center_points.append(center)
 
-            # Store fixed coordinates back in detection (optional)
-            det = ((x1, y1, x2, y2), *det[1:])
+            det = ((x1, y1, x2, y2), *det[1:])  # Update bbox
 
-            zone = self._zone_of_point(center)
-            if zone != -1:
-                obj_id = det[4]  # tracker ID
-                if obj_id not in self.zone_of_detections or self.zone_of_detections[obj_id] != zone:
-                    self.zone_of_detections[obj_id] = zone
-                    filtered.append(det)
+            obj_id = det[4]  # tracker ID
 
-                    # Crop and store
-                    crop = frame[y1:y2, x1:x2].copy()
-                    if crop.size > 0:
-                        self._pending_crops.append((obj_id, crop))
+            if self.use_zones:
+                zone = self._zone_of_point(center)
+                if zone != -1:
+                    if obj_id not in self.zone_of_detections or self.zone_of_detections[obj_id] != zone:
+                        self.zone_of_detections[obj_id] = zone
+                        filtered.append(det)
+                        crop = frame[y1:y2, x1:x2].copy()
+                        if crop.size > 0:
+                            self._pending_crops.append((obj_id, crop))
+            else:
+                # No zone logic: crop everything
+                filtered.append(det)
+                crop = frame[y1:y2, x1:x2].copy()
+                if crop.size > 0:
+                    self._pending_crops.append((obj_id, crop))
 
-        if self.debug:
+        if self.debug and self.use_zones:
             self._draw_debug(frame, center_points)
 
         return filtered
 
     def get_crops(self):
-        """
-        Returns:
-            List of tuples (id, crop_image)
-        """
         return self._pending_crops
