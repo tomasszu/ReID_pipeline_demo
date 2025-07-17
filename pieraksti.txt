@@ -1,0 +1,13 @@
+1) Japadoma ka nodrisonat ka nomaina vido un neaizmirst par roi kaadu, kas butu by default. Varbut, ka ja ir noradits konkrets (ne-default) video tad obligati japieskir ari ROI, ja ne- tad roi - NONe.
+
+2) param - video nosaukums
+
+3) param - 2. video aizkave sekundees
+
+4) param - pec cik frames saglabaatie feature embeddingi ir dzeesti.
+
+5) param - YOLO modelis
+
+6) param - debug (vai rādīt crop zones u.c.)
+
+7) param - device
