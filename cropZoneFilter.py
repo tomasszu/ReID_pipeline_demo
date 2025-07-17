@@ -1,35 +1,53 @@
 import cv2
 
 class CropZoneFilter:
-    def __init__(self, frame_shape, rows=None, cols=None, y_threshold=None, debug=True):
+    def __init__(self, rows=None, cols=None,
+                 area_bottom_left = None, area_top_right=None, debug=True):
         self.rows = rows
         self.cols = cols
-        self.y_threshold = y_threshold
         self.debug = debug
         self._pending_crops = []  # holds (id, crop) for the current frame
         self.zone_of_detections = {}
 
-        if self.rows is not None and self.cols is not None and self.y_threshold is not None:
-            self.zones = self._generate_zones(frame_shape)
+        # Set the cropping area
+        self.area_bottom_left = area_bottom_left  # (x_min, y_max)
+        self.area_top_right = area_top_right      # (x_max, y_min)
+
+        # asserts that the points are of valid structure
+        def _assert_point(name, point):
+            assert isinstance(point, (tuple, list)), f"{name} must be a tuple or list"
+            assert len(point) == 2, f"{name} must have exactly two elements (x, y)"
+            assert all(isinstance(v, (int, float)) for v in point), f"{name} values must be int or float"
+
+        if self.rows is not None and self.cols is not None \
+        and self.area_bottom_left is not None and self.area_top_right is not None:
+
+            _assert_point("area_bottom_left", self.area_bottom_left)
+            _assert_point("area_top_right", self.area_top_right)
+
+            self.zones = self._generate_zones()
             self.use_zones = True
         else:
             self.zones = []
             self.use_zones = False  # zone filtering disabled
 
-    def _generate_zones(self, frame_shape):
-        h, w = frame_shape[:2]
-        zone_width = w // self.cols
-        zone_height = h // self.rows
+
+    def _generate_zones(self):
+        x_min, y_max = self.area_bottom_left
+        x_max, y_min = self.area_top_right
+
+        zone_width = (x_max - x_min) / self.cols
+        zone_height = (y_max - y_min) / self.rows
         zones = []
 
         for i in range(self.rows):
             for j in range(self.cols):
-                x1 = j * zone_width
-                y1 = i * zone_height
-                x2 = (j + 1) * zone_width
-                y2 = (i + 1) * zone_height
-                if y1 > self.y_threshold:
-                    zones.append((int(x1), int(y1), int(x2), int(y2)))
+                x1 = x_min + j * zone_width
+                y1 = y_min + i * zone_height
+                x2 = x_min + (j + 1) * zone_width
+                y2 = y_min + (i + 1) * zone_height
+                zones.append((int(x1), int(y1), int(x2), int(y2)))
+
         return zones
 
     def _zone_of_point(self, point):

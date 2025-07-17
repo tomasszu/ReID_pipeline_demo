@@ -32,8 +32,8 @@ def run_demo(video_path1, video_path2, roi_path1=None):
 
 
     # Initialize crop zone filter with the frame shape
-    crop_filter1 = CropZoneFilter(frame_shape, rows=8, cols=4, y_threshold=325, debug=True)
-    crop_filter2 = CropZoneFilter(frame_shape2)
+    crop_filter1 = CropZoneFilter(rows=7, cols=6, area_bottom_left= (0, 1000), area_top_right=(1750, 320), debug=True)
+    crop_filter2 = CropZoneFilter()
 
     feature_extractor = ExtractingFeatures()
 
@@ -48,6 +48,7 @@ def run_demo(video_path1, video_path2, roi_path1=None):
         ret2, frame2 = detector2.read_frame()
 
         if not ret1 or not ret2:
+            print("End of video stream.")
             break
 
         detections1, frame1 = detector1.process_frame(frame1)
@@ -78,7 +79,7 @@ def run_demo(video_path1, video_path2, roi_path1=None):
         #vis_frame1 = cv2.resize(vis_frame1, (1280, 720))
 
         cv2.imshow("Vehicle Re-ID Demo", combined)
-        if cv2.waitKey(0) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     detector1.release()

@@ -23,3 +23,6 @@
 12) ieviest crop zones arī matchingā, lai track id nes tās mašīnas starp zonām ( iespejams, ka varetu dariit tā, ka ja ir unknown tad dzēš vispār ārā un tad nākamajā frame jau būs jauns detection un jauns matching, tiem kuriem matchoja id - tiem turās līdz nākamajam crop zone)
 
 13) Ja viss pa dirsu tad te varetu izmeginat to transformeru modeli
+
+
+!!!! KKas notiek, ka otrais video tiek lasīts lenāk nekā 1. !!! Iekš Python koda, kaut ir korekcija veikta ārpus koda.
