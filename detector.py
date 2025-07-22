@@ -64,18 +64,27 @@ class VehicleDetector:
         # Update with tracker
         tracked_detections = self.tracker.update_with_detections(detections)
 
+        if detections.xyxy.shape[0] > 0 and tracked_detections.xyxy.shape[0] > 0:
 
-        # match tracked boxes with original detections using IoU
-        iou_matrix = box_iou_batch(detections.xyxy, tracked_detections.xyxy)
+            # match tracked boxes with original detections using IoU
+            iou_matrix = box_iou_batch(detections.xyxy, tracked_detections.xyxy)
 
-        # Assign each tracked box to the detection with the highest IoU
-        best_matches = iou_matrix.argmax(axis=0)  # shape: (num_tracked,)
+            # Assign each tracked box to the detection with the highest IoU
+            best_matches = iou_matrix.argmax(axis=0)  # shape: (num_tracked,)
 
-        # Now for each tracked detection, attach the original box
-        original_boxes = detections.xyxy[best_matches]
+            # Now for each tracked detection, attach the original box
+            original_boxes = detections.xyxy[best_matches]
 
-        # Attach to .data["original_xyxy"]
-        tracked_detections.data["original_xyxy"] = original_boxes
+            # Attach to .data["original_xyxy"]
+            tracked_detections.data["original_xyxy"] = original_boxes
+
+        else:
+            tracked_detections.data["original_xyxy"] = np.empty((0, 4), dtype=np.float32)
+            print("No detections or tracked detections found.")
+            print(f"Tracked detections: {len(tracked_detections.xyxy)} -----------------------------------")
+            print(detections)
+            print(f"Original detections: {length} -----------------------------------")
+            print(tracked_detections)
 
         # print(f"Tracked detections: {len(tracked_detections.xyxy)} -----------------------------------")
         # print(tracked_detections)

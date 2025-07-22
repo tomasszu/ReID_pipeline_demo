@@ -1,6 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cu113
 
--e git+https://github.com/roboflow/supervision.git@8599345a3c00c26e7a05d7c81e23bf1d5cf8b8e2#egg=supervision
+#-e git+https://github.com/roboflow/supervision.git@8599345a3c00c26e7a05d7c81e23bf1d5cf8b8e2#egg=supervision
 ultralytics==8.0.197
 torch==1.12.1+cu113
 torchaudio==0.12.1+cu113

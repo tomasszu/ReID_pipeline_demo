@@ -24,5 +24,7 @@
 
 13) Ja viss pa dirsu tad te varetu izmeginat to transformeru modeli
 
+!!! BBox annotator izmaiņās neatspoguļojas github repo.
 
-!!!! KKas notiek, ka otrais video tiek lasīts lenāk nekā 1. !!! Iekš Python koda, kaut ir korekcija veikta ārpus koda.
+
+!!!! KKas notiek, ka otrais video tiek lasīts lenāk nekā 1. !!! Iekš Python koda, kaut ir korekcija veikta ārpus koda. Tas tika atrisināts un ir atrodams misc folderī.

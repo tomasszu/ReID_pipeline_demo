@@ -73,7 +73,15 @@ class BoundingBoxAnnotator(BaseAnnotator):
         supervision-annotator-examples/bounding-box-annotator-example-purple.png)
         """
         for detection_idx in range(len(detections)):
-            x1, y1, x2, y2 = detections.xyxy[detection_idx].astype(int)
+
+            """  Original bbox coordinate use from the Yolov8 model edit """
+
+            #! EDIT: to use the original bboxes from detection that have been saved in the data field under original_xyxy
+            # --------------------------------------------------------------------------------------------------------------------
+            # x1, y1, x2, y2 = detections.xyxy[detection_idx].astype(int)
+            x1, y1, x2, y2 = detections.data["original_xyxy"][detection_idx].astype(int)
+            # ! EDIT END
+            # --------------------------------------------------------------------------------------------------------------------
             color = resolve_color(
                 color=self.color,
                 detections=detections,
