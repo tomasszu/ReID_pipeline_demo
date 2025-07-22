@@ -78,10 +78,11 @@ class CropZoneFilter:
         center_points = []
 
         height, width = frame.shape[:2]
+        
 
         for det in detections:
             # Clamp and fix bbox coordinates
-            x1, y1, x2, y2 = map(int, det[0])
+            x1, y1, x2, y2 = map(int, det[5]["original_xyxy"])
             x1 = max(1, min(x1, width - 2))
             y1 = max(1, min(y1, height - 2))
             x2 = max(x1 + 1, min(x2, width - 1))

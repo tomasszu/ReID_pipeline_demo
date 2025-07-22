@@ -3,6 +3,7 @@ import supervision as sv
 from ultralytics import YOLO
 import numpy as np
 import os
+from supervision.detection.utils import box_iou_batch
 
 class VehicleDetector:
     def __init__(self, video_path: str, class_ids=None, model_path="yolov8x.pt", device="cuda", roi_path=None):
@@ -50,16 +51,37 @@ class VehicleDetector:
         results = self.model(roi_frame)[0]
         detections = sv.Detections.from_ultralytics(results)
 
+        # Save original before tracking
+        length = len(detections.xyxy)
+
         # Filter classes & confidence
         detections = detections[np.isin(detections.class_id, self.class_ids)]
         detections = detections[np.greater(detections.confidence, self.conf_threshold)]
 
-
+        # print(f"Orig detections: {len(detections.xyxy)} ---------------------------------------------")
+        # print(detections)
 
         # Update with tracker
-        detections = self.tracker.update_with_detections(detections)
+        tracked_detections = self.tracker.update_with_detections(detections)
 
-        return detections, frame
+
+        # match tracked boxes with original detections using IoU
+        iou_matrix = box_iou_batch(detections.xyxy, tracked_detections.xyxy)
+
+        # Assign each tracked box to the detection with the highest IoU
+        best_matches = iou_matrix.argmax(axis=0)  # shape: (num_tracked,)
+
+        # Now for each tracked detection, attach the original box
+        original_boxes = detections.xyxy[best_matches]
+
+        # Attach to .data["original_xyxy"]
+        tracked_detections.data["original_xyxy"] = original_boxes
+
+        # print(f"Tracked detections: {len(tracked_detections.xyxy)} -----------------------------------")
+        # print(tracked_detections)
+
+
+        return tracked_detections, frame
 
     def release(self):
         self.cap.release()

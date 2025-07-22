@@ -22,10 +22,24 @@ def match_detections(detections: sv.Detections, reid_results):
             detections.tracker_id[i] = -1  # no match found
             detections.confidence[i] = 0.0
 
+def transfer_tracker_ids(source: sv.Detections, target: sv.Detections):
+    """
+    Transfers tracker IDs from source detections to target,
+    matching by position (assumes same detection order).
+    """
+    if source.tracker_id is None or len(source.tracker_id) == 0:
+        return
+
+    target.tracker_id = source.tracker_id.copy()
+
 
 def run_demo(video_path1, video_path2, roi_path1=None):
     detector1 = VehicleDetector(video_path1, roi_path=roi_path1)
     detector2 = VehicleDetector(video_path2)
+
+    # Šis jāieliek kā arguments!!
+    original_fps = detector2.cap.get(cv2.CAP_PROP_FPS)
+    print(f"Original FPS: {original_fps}")
 
     frame_shape = detector1.cap.get(cv2.CAP_PROP_FRAME_HEIGHT), detector1.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     frame_shape2 = detector2.cap.get(cv2.CAP_PROP_FRAME_HEIGHT), detector2.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -51,8 +65,22 @@ def run_demo(video_path1, video_path2, roi_path1=None):
             print("End of video stream.")
             break
 
+        # getting original and tracked detections
         detections1, frame1 = detector1.process_frame(frame1)
         detections2, frame2 = detector2.process_frame(frame2)
+
+        # #Modified orifinals
+        # print(f"Frame 1 detections: {orig_dets1}")
+        # print(f"Frame 2 detections: {orig_dets2}")
+        # # tracked detections
+        # print(f"Tracked Frame 1 detections: {detections1}")
+        # print(f"Tracked Frame 2 detections: {detections2}")
+        
+
+
+        # # Assign tracker IDs to original bboxes
+        # transfer_tracker_ids(detections1, orig_dets1)
+        # transfer_tracker_ids(detections2, orig_dets2)
 
         # This returns only the new zone entries
         filtered_dets1 = crop_filter1.filter_and_crop(frame1, detections1)
@@ -79,7 +107,7 @@ def run_demo(video_path1, video_path2, roi_path1=None):
         #vis_frame1 = cv2.resize(vis_frame1, (1280, 720))
 
         cv2.imshow("Vehicle Re-ID Demo", combined)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(0) & 0xFF == ord('q'):
             break
 
     detector1.release()
