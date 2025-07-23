@@ -10,15 +10,19 @@ class Visualizer:
         self.draw_traces = traces
 
     def annotate(self, frame, detections):
-        
-        labels = [
-            f"{tracker_id if tracker_id != -1 else 'Unknown'} {self.class_names[class_id] if tracker_id != -1 else ''} {confidence:0.2f}"
-            for _, _, confidence, class_id, tracker_id, _
-            in detections
-        ]
+        labels = []
+        for _, _, confidence, class_id, tracker_id, _ in detections:
+            if tracker_id == -1:
+                label = "Unknown"
+            else:
+                name = self.class_names.get(class_id, "Vehicle")
+                label = f"ID {tracker_id} {name} {confidence:.2f}"
+            labels.append(label)
 
         frame = self.box_annotator.annotate(scene=frame.copy(), detections=detections)
         frame = self.label_annotator.annotate(scene=frame, detections=detections, labels=labels)
+
         if self.draw_traces:
             frame = self.trace_annotator.annotate(scene=frame, detections=detections)
+
         return frame

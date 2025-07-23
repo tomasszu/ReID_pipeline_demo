@@ -3,6 +3,7 @@ from visualizer import Visualizer
 from cropZoneFilter import CropZoneFilter
 from featureExtractor import ExtractingFeatures
 from lanceDBOperator import LanceDBOperator
+from trackerStateHelper import ReIDController
 import cv2
 import supervision as sv
 
@@ -44,14 +45,15 @@ def run_demo(video_path1, video_path2, roi_path1=None):
     frame_shape = detector1.cap.get(cv2.CAP_PROP_FRAME_HEIGHT), detector1.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     frame_shape2 = detector2.cap.get(cv2.CAP_PROP_FRAME_HEIGHT), detector2.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 
-
     # Initialize crop zone filter with the frame shape
     crop_filter1 = CropZoneFilter(rows=7, cols=6, area_bottom_left= (0, 1000), area_top_right=(1750, 320), debug=True)
-    crop_filter2 = CropZoneFilter()
+    crop_filter2 = CropZoneFilter(rows=7, cols=6, area_bottom_left= (200, 900), area_top_right=(1750, 320), debug=True)
 
     feature_extractor = ExtractingFeatures()
 
     db = LanceDBOperator("lancedb", features_size=256)
+
+    reid_controller = ReIDController(db=db, extractor=feature_extractor, crop_filter=crop_filter2)
 
 
     visualizer1 = Visualizer(detector1.class_names)
@@ -82,20 +84,23 @@ def run_demo(video_path1, video_path2, roi_path1=None):
         # transfer_tracker_ids(detections1, orig_dets1)
         # transfer_tracker_ids(detections2, orig_dets2)
 
-        # This returns only the new zone entries
-        filtered_dets1 = crop_filter1.filter_and_crop(frame1, detections1)
-        filtered_dets2 = crop_filter2.filter_and_crop(frame2, detections2)
+        current_ids = reid_controller.get_all_ids()
+
+
+        filtered_dets1 = crop_filter1.filter_and_crop(frame1, detections1, current_ids)
+        filtered_dets2 = crop_filter2.filter_and_crop(frame2, detections2, current_ids)
+
 
         crops1 = crop_filter1.get_crops()
         crops2 = crop_filter2.get_crops()
 
         features1 = feature_extractor.get_features_batch(crops1)
-        features2 = feature_extractor.get_features_batch(crops2)
-
         db.add_features(features1)
-        results = db.query_features(features2)
 
-        match_detections(detections2, results)
+
+        results = reid_controller.match(crops2)
+        reid_controller.apply_to_detections(detections2)
+
 
         
         vis_frame1 = visualizer1.annotate(frame1, detections1)

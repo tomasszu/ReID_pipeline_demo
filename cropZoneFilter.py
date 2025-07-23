@@ -9,6 +9,7 @@ class CropZoneFilter:
         self._pending_crops = []  # holds (id, crop) for the current frame
         self.zone_of_detections = {}
 
+
         # Set the cropping area
         self.area_bottom_left = area_bottom_left  # (x_min, y_max)
         self.area_top_right = area_top_right      # (x_max, y_min)
@@ -64,7 +65,7 @@ class CropZoneFilter:
         for center in center_points:
             cv2.circle(frame, center, 4, (0, 0, 255), -1)
 
-    def filter_and_crop(self, frame, detections):
+    def filter_and_crop(self, frame, detections, current_ids=None):
         """
         Args:
             frame: current frame
@@ -73,6 +74,9 @@ class CropZoneFilter:
         Returns:
             filtered_detections: detections that are accepted (based on zone logic or unconditionally)
         """
+        if current_ids is None:
+            current_ids = {}
+        
         self._pending_crops.clear()
         filtered = []
         center_points = []
@@ -98,8 +102,18 @@ class CropZoneFilter:
             if self.use_zones:
                 zone = self._zone_of_point(center)
                 if zone != -1:
+                    should_crop = False
+
+                    # New zone entry → definitely crop
                     if obj_id not in self.zone_of_detections or self.zone_of_detections[obj_id] != zone:
                         self.zone_of_detections[obj_id] = zone
+                        should_crop = True
+
+                    # If still not re-identified, keep retrying every frame
+                    elif current_ids.get(obj_id, -1) == -1:
+                        should_crop = True
+
+                    if should_crop:
                         filtered.append(det)
                         crop = frame[y1:y2, x1:x2].copy()
                         if crop.size > 0:
