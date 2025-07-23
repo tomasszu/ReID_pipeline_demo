@@ -80,11 +80,11 @@ class VehicleDetector:
 
         else:
             tracked_detections.data["original_xyxy"] = np.empty((0, 4), dtype=np.float32)
-            print("No detections or tracked detections found.")
-            print(f"Tracked detections: {len(tracked_detections.xyxy)} -----------------------------------")
-            print(detections)
-            print(f"Original detections: {length} -----------------------------------")
-            print(tracked_detections)
+            # print("No detections or tracked detections found.")
+            # print(f"Tracked detections: {len(tracked_detections.xyxy)} -----------------------------------")
+            # print(detections)
+            # print(f"Original detections: {length} -----------------------------------")
+            # print(tracked_detections)
 
         # print(f"Tracked detections: {len(tracked_detections.xyxy)} -----------------------------------")
         # print(tracked_detections)
@@ -94,3 +94,6 @@ class VehicleDetector:
 
     def release(self):
         self.cap.release()
+
+    def get_current_frame_index(self):
+        return int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))

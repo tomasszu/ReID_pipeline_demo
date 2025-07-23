@@ -13,7 +13,8 @@ class LanceDBOperator:
         schema = pa.schema([
             pa.field("vehicle_id", pa.string()),
             pa.field("vector", pa.list_(pa.float32(), features_size)),
-            pa.field("times_summed", pa.int8())
+            pa.field("times_summed", pa.int8()),
+            pa.field("frame_added", pa.int32())  # NEW
         ])
 
         if table_name not in self.db.table_names():
@@ -23,7 +24,7 @@ class LanceDBOperator:
             self.table = self.db.open_table(table_name)
             print(f"[LanceDB] Opened existing table '{table_name}'")
 
-    def add_features(self, features_with_ids):
+    def add_features(self, features_with_ids, frame_id: int):
         """
         Args:
             features_with_ids: List of tuples (vehicle_id: str/int, feature_vector: np.ndarray or list)
@@ -36,7 +37,8 @@ class LanceDBOperator:
             {
                 "vehicle_id": str(obj_id),
                 "vector": feature.tolist() if hasattr(feature, "tolist") else feature,
-                "times_summed": 1  # default, you can increment this later if needed
+                "times_summed": 1,
+                "frame_added": frame_id
             }
             for obj_id, feature in features_with_ids
         ]
@@ -89,5 +91,12 @@ class LanceDBOperator:
         if os.path.exists(self.db_path):
             shutil.rmtree(self.db_path)
             print(f"[LanceDB] Deleted database directory '{self.db_path}'")
+
+    def expire_old_features(self, current_frame, max_age):
+        try:
+            self.table.delete(f"frame_added < {current_frame - max_age}")
+            #print(f"[LanceDB] Deleted features older than {max_age} frames")
+        except Exception as e:
+            print(f"[LanceDB] Error during deletion: {e}")
 
 

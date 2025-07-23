@@ -14,13 +14,13 @@
 
 8) Jāpievieno lielie faili iekš github large files storage vai kkā
 
-9) param - Cosine similarity distance (<= 0.50 maybe)
+V) param - Cosine similarity distance (<= 0.50 maybe)
 
-10) !! Uzlabot crop zones ( paņemt tās nost no pašām malām vismaz pirmajā video)
+V) !! Uzlabot crop zones ( paņemt tās nost no pašām malām vismaz pirmajā video)
 
-11) Salabot tās detection bbox ko griež ārā no frame, lai viņas apklāj visu mašīnu (paskatities varbut citos kodos es jau to biju atrisinajis)
+V) Salabot tās detection bbox ko griež ārā no frame, lai viņas apklāj visu mašīnu (paskatities varbut citos kodos es jau to biju atrisinajis)
 
-12) ieviest crop zones arī matchingā, lai track id nes tās mašīnas starp zonām ( iespejams, ka varetu dariit tā, ka ja ir unknown tad dzēš vispār ārā un tad nākamajā frame jau būs jauns detection un jauns matching, tiem kuriem matchoja id - tiem turās līdz nākamajam crop zone)
+V) ieviest crop zones arī matchingā, lai track id nes tās mašīnas starp zonām ( iespejams, ka varetu dariit tā, ka ja ir unknown tad dzēš vispār ārā un tad nākamajā frame jau būs jauns detection un jauns matching, tiem kuriem matchoja id - tiem turās līdz nākamajam crop zone)
 
 13) Ja viss pa dirsu tad te varetu izmeginat to transformeru modeli
 

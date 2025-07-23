@@ -94,8 +94,13 @@ def run_demo(video_path1, video_path2, roi_path1=None):
         crops1 = crop_filter1.get_crops()
         crops2 = crop_filter2.get_crops()
 
+        frame_id = detector1.get_current_frame_index()
+
         features1 = feature_extractor.get_features_batch(crops1)
-        db.add_features(features1)
+        db.add_features(features1, frame_id)
+        
+
+        db.expire_old_features(frame_id, max_age=100)  # Keep features for X frames
 
 
         results = reid_controller.match(crops2)
