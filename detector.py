@@ -6,7 +6,7 @@ import os
 from supervision.detection.utils import box_iou_batch
 
 class VehicleDetector:
-    def __init__(self, video_path: str, class_ids=None, model_path="yolov8x.pt", device="cuda", roi_path=None):
+    def __init__(self, video_path: str, class_ids=None, model_path="yolov8x.pt", device="cuda", roi_path=None, start_offset_frames: int = 0):
         self.cap = cv2.VideoCapture(video_path)
         self.model = YOLO(model_path).to(device)
         self.tracker = sv.ByteTrack()
@@ -18,6 +18,11 @@ class VehicleDetector:
 
         self.roi_mask = self._load_roi(roi_path, video_path)
 
+
+        self.delay_frames = start_offset_frames
+        self.frozen_frame = None
+        self.current_frame_index = 0
+
     def _load_roi(self, roi_path, video_path):
         # If explicitly given, try to load
         if roi_path and os.path.exists(roi_path):
@@ -26,9 +31,17 @@ class VehicleDetector:
 
         # Otherwise try to derive from video path
         base_path, _ = os.path.splitext(video_path)
-        auto_roi_path = base_path + "_roi.png"
+        auto_roi_path_a = base_path + "_roi.png"
+        auto_roi_path_b = base_path + "roi.png"
+        auto_roi_path_c = base_path + "-roi.png"
+        auto_roi_path_d = base_path + "Roi.png"
 
-        if os.path.exists(auto_roi_path):
+        auto_roi_path = auto_roi_path_a if os.path.exists(auto_roi_path_a) else \
+                        auto_roi_path_b if os.path.exists(auto_roi_path_b) else \
+                        auto_roi_path_c if os.path.exists(auto_roi_path_c) else \
+                        auto_roi_path_d if os.path.exists(auto_roi_path_d) else None
+
+        if auto_roi_path:
             print(f"Using auto-detected ROI from: {auto_roi_path}")
             # Ensure the ROI is grayscale
             return cv2.imread(auto_roi_path, cv2.IMREAD_GRAYSCALE)
@@ -38,8 +51,17 @@ class VehicleDetector:
 
 
     def read_frame(self):
-        ret, frame = self.cap.read()
-        return ret, frame
+        if self.delay_frames > 0:
+            if self.frozen_frame is None:
+                ret, frame = self.cap.read()
+                if not ret:
+                    return False, None
+                self.frozen_frame = frame.copy()
+            self.delay_frames -= 1
+            return True, self.frozen_frame.copy()
+        else:
+            ret, frame = self.cap.read()
+            return ret, frame
 
     def process_frame(self, frame):
 

@@ -10,9 +10,9 @@ import torch.nn as nn
 from vehicle_reid.load_model import load_model_from_opts
 
 class ExtractingFeatures:
-    def __init__(self):
+    def __init__(self, device):
 
-        self.device = "cuda"
+        self.device = device
         self.model = load_model_from_opts("vehicle_reid/models/veri+vehixlex_editTrainPar1/opts.yaml", 
                                      ckpt="vehicle_reid/models/veri+vehixlex_editTrainPar1/net_39.pth", 
                                      remove_classifier=True)
@@ -32,12 +32,12 @@ class ExtractingFeatures:
         img_flip = img.index_select(3, inv_idx)
         return img_flip
 
-    def extract_feature(self, model, X, device="cuda"):
+    def extract_feature(self, model, X):
         """
         Extract embeddings of a batch of image tensors X.
         X should be of shape [B, C, H, W]
         """
-        X = X.to(device)
+        X = X.to(self.device)
 
         with torch.no_grad():
             features = model(X)  # shape: [B, D]
@@ -50,7 +50,7 @@ class ExtractingFeatures:
 
         return features
     
-    def get_features_batch(self, obj_crop_list, device="cuda"):
+    def get_features_batch(self, obj_crop_list):
         """
         Accepts list of (obj_id, crop) tuples.
         Returns list of (obj_id, feature_vector) tuples.
@@ -62,19 +62,19 @@ class ExtractingFeatures:
         processed_images = torch.stack([
             self.data_transforms(Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)))
             for img in crops
-        ]).to(device)
+        ]).to(self.device)
 
-        features = self.extract_feature(self.model, processed_images, device=device)
+        features = self.extract_feature(self.model, processed_images)
         features = features.detach().cpu().numpy()
 
         return list(zip(obj_ids, features))
 
     
-    def get_feature(self, image, device="cuda"):
+    def get_feature(self, image):
 
         image = [image]
 
-        X_images = torch.stack(tuple(map(self.data_transforms, image))).to(device)
+        X_images = torch.stack(tuple(map(self.data_transforms, image))).to(self.device)
 
         features = [self.extract_feature(self.model, X_images)]
         features = torch.stack(features).detach().cpu()

@@ -4,39 +4,27 @@ from cropZoneFilter import CropZoneFilter
 from featureExtractor import ExtractingFeatures
 from lanceDBOperator import LanceDBOperator
 from trackerStateHelper import ReIDController
+
 import cv2
-import supervision as sv
 
-def match_detections(detections: sv.Detections, reid_results):
-    """
-    Overwrite tracker IDs with ReID-matched IDs,
-    and confidence scores with similarity (1 - distance).
-    """
-    reid_map = {obj_id: (matched_id, dist) for obj_id, matched_id, dist in reid_results}
+import argparse
 
-    for i, track_id in enumerate(detections.tracker_id):
-        if track_id in reid_map:
-            matched_id, dist = reid_map[track_id]
-            detections.tracker_id[i] = matched_id  # overwrite track ID
-            detections.confidence[i] = 1 - dist    # similarity as confidence
-        else:
-            detections.tracker_id[i] = -1  # no match found
-            detections.confidence[i] = 0.0
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--video_path1', type=str, default='videos/vdo4.avi', help='Path to the first video file. (Re-Identification FROM)')
+    parser.add_argument('--video_path2', type=str, default='videos/vdo1.avi', help='Path to the second video file. (Re-Identification TO)')
+    parser.add_argument('--roi_path1', type=str, default="videos/vdo4_roi.png", help='Path to the ROI image for the first video. If not provided, it will try to auto-detect in the same folder based on the video name.')
+    parser.add_argument('--roi_path2', type=str, default="videos/vdo1_roi.png", help='Path to the ROI image for the second video. If not provided, it will try to auto-detect in the same folder based on the video name.')
+    parser.add_argument('--detection_model_path', type=str, default='yolov8x.pt', choices=['yolov8x.pt', 'yolov8l.pt', 'yolov5su.pt'] , help='Path to the YOLO model file.')
+    parser.add_argument('--device', type=str, default='cuda', choices=['cuda','cpu'], help='Device to run the model on (e.g., "cuda" or "cpu").')
+    parser.add_argument('--start_offset_frames', type=int, default=0, help='Number of frames to delay processing at the start of the first video.')
+    parser.add_argument('--reid_db_path', type=str, default='lancedb', help='Path to the LanceDB database for storing features.')
+    parser.add_argument('--features_size', type=int, default=256, help='Size of the feature embeddings to be stored in the database.')
+    return parser.parse_args()
 
-def transfer_tracker_ids(source: sv.Detections, target: sv.Detections):
-    """
-    Transfers tracker IDs from source detections to target,
-    matching by position (assumes same detection order).
-    """
-    if source.tracker_id is None or len(source.tracker_id) == 0:
-        return
-
-    target.tracker_id = source.tracker_id.copy()
-
-
-def run_demo(video_path1, video_path2, roi_path1=None):
-    detector1 = VehicleDetector(video_path1, roi_path=roi_path1)
-    detector2 = VehicleDetector(video_path2)
+def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, device, start_offset_frames):
+    detector1 = VehicleDetector(video_path1, roi_path=roi_path1, model_path=detection_model)
+    detector2 = VehicleDetector(video_path2, roi_path=roi_path2, model_path=detection_model)
 
     # Šis jāieliek kā arguments!!
     original_fps = detector2.cap.get(cv2.CAP_PROP_FPS)
@@ -49,7 +37,7 @@ def run_demo(video_path1, video_path2, roi_path1=None):
     crop_filter1 = CropZoneFilter(rows=7, cols=6, area_bottom_left= (0, 1000), area_top_right=(1750, 320), debug=True)
     crop_filter2 = CropZoneFilter(rows=7, cols=6, area_bottom_left= (200, 900), area_top_right=(1750, 320), debug=True)
 
-    feature_extractor = ExtractingFeatures()
+    feature_extractor = ExtractingFeatures(device=device)
 
     db = LanceDBOperator("lancedb", features_size=256)
 
@@ -128,4 +116,6 @@ def run_demo(video_path1, video_path2, roi_path1=None):
 
 if __name__ == "__main__":
     #run_demo("video1.avi", "video2.avi")
-    run_demo(video_path1="videos/vdo4.avi", video_path2="videos/vdo1.avi", roi_path1="videos/vdo4_roi.png")
+    args = parse_args()
+
+    run_demo(video_path1=args.video_path1, video_path2=args.video_path2, roi_path1=args.roi_path1, roi_path2=args.roi_path2, detection_model=args.detection_model_path, device=args.device, start_offset_frames=args.start_offset_frames)
