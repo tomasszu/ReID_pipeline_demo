@@ -6,11 +6,11 @@ V) param - 2. video aizkave sekundees
 
 V) param - pec cik frames saglabaatie feature embeddingi ir dzeesti.
 
-5) param - YOLO modelis
+V) param - YOLO modelis
 
-6) param - debug (vai rādīt crop zones u.c.)
+V) param - debug (vai rādīt crop zones u.c.)
 
-7) param - device
+V) param - device
 
 8) Jāpievieno lielie faili iekš github large files storage vai kkā
 

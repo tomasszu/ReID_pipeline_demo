@@ -17,14 +17,28 @@ def parse_args():
     parser.add_argument('--roi_path2', type=str, default="videos/vdo1_roi.png", help='Path to the ROI image for the second video. If not provided, it will try to auto-detect in the same folder based on the video name.')
     parser.add_argument('--detection_model_path', type=str, default='yolov8x.pt', choices=['yolov8x.pt', 'yolov8l.pt', 'yolov5su.pt'] , help='Path to the YOLO model file.')
     parser.add_argument('--device', type=str, default='cuda', choices=['cuda','cpu'], help='Device to run the model on (e.g., "cuda" or "cpu").')
-    parser.add_argument('--start_offset_frames', type=int, default=0, help='Number of frames to delay processing at the start of the first video.')
-    parser.add_argument('--reid_db_path', type=str, default='lancedb', help='Path to the LanceDB database for storing features.')
-    parser.add_argument('--features_size', type=int, default=256, help='Size of the feature embeddings to be stored in the database.')
+    parser.add_argument('--scnd_video_offset', type=int, default=0, help='Number of frames to delay processing 2nd video from the start of the first video. In case the vehicles in the first video appear too late or one needs to simulate a bigger delay of the reidentifiable vehicles appearing in the second video.')
+    parser.add_argument('--reID_features_size', type=int, default=256, help='Size of the feature embeddings to be stored in the database.')
+    parser.add_argument('--debug', default=True, type=bool, help='Enable debug mode to visualize crop zones and other debug information.')
+    parser.add_argument('--reID_features_expire', type=int, default=100, help='Number of frames after which the feature embeddings will be deleted from the database. Default is 100 frames.')
+
+
+    # Args concerning the establishment of crop zones for video 1 and video 2
+    parser.add_argument('--crop_zone_rows_vid1', type=int, default=7, help='Number of rows in the crop zone grid for the first video.')
+    parser.add_argument('--crop_zone_cols_vid1', type=int, default=6, help='Number of columns in the crop zone grid for the first video.')
+    parser.add_argument('--crop_zone_area_bottom_left_vid1', type=tuple, default=(0, 1000), help='Bottom-left corner of the crop zone area as a tuple (x, y) for the first video.')
+    parser.add_argument('--crop_zone_area_top_right_vid1', type=tuple, default=(1750, 320), help='Top-right corner of the crop zone area as a tuple (x, y) for the first video.')
+
+    parser.add_argument('--crop_zone_rows_vid2', type=int, default=7, help='Number of rows in the crop zone grid for the second video.')
+    parser.add_argument('--crop_zone_cols_vid2', type=int, default=6, help='Number of columns in the crop zone grid for the second video.')
+    parser.add_argument('--crop_zone_area_bottom_left_vid2', type=tuple, default=(200, 900), help='Bottom-left corner of the crop zone area for the second video as a tuple (x, y).')
+    parser.add_argument('--crop_zone_area_top_right_vid2', type=tuple, default=(1750, 320), help='Top-right corner of the crop zone area for the second video as a tuple (x, y).')  
+
     return parser.parse_args()
 
-def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, device, start_offset_frames):
-    detector1 = VehicleDetector(video_path1, roi_path=roi_path1, model_path=detection_model)
-    detector2 = VehicleDetector(video_path2, roi_path=roi_path2, model_path=detection_model)
+def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, device, scnd_video_offset_frames, reID_features_size, debug, features_expire, crop_zone_rows_1, crop_zone_cols_1, crop_zone_area_bottom_left_1, crop_zone_area_top_right_1, crop_zone_rows_2, crop_zone_cols_2, crop_zone_area_bottom_left_2, crop_zone_area_top_right_2):
+    detector1 = VehicleDetector(video_path=video_path1, roi_path=roi_path1, model_path=detection_model, device=device)
+    detector2 = VehicleDetector(video_path=video_path2, roi_path=roi_path2, model_path=detection_model, device=device, start_offset_frames=scnd_video_offset_frames)
 
     # Šis jāieliek kā arguments!!
     original_fps = detector2.cap.get(cv2.CAP_PROP_FPS)
@@ -34,12 +48,12 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
     frame_shape2 = detector2.cap.get(cv2.CAP_PROP_FRAME_HEIGHT), detector2.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 
     # Initialize crop zone filter with the frame shape
-    crop_filter1 = CropZoneFilter(rows=7, cols=6, area_bottom_left= (0, 1000), area_top_right=(1750, 320), debug=True)
-    crop_filter2 = CropZoneFilter(rows=7, cols=6, area_bottom_left= (200, 900), area_top_right=(1750, 320), debug=True)
+    crop_filter1 = CropZoneFilter(rows=crop_zone_rows_1, cols=crop_zone_cols_1, area_bottom_left= crop_zone_area_bottom_left_1, area_top_right=crop_zone_area_top_right_1, debug=debug)
+    crop_filter2 = CropZoneFilter(rows=crop_zone_rows_2, cols=crop_zone_cols_2, area_bottom_left= crop_zone_area_bottom_left_2, area_top_right=crop_zone_area_top_right_2, debug=debug)
 
     feature_extractor = ExtractingFeatures(device=device)
 
-    db = LanceDBOperator("lancedb", features_size=256)
+    db = LanceDBOperator("lancedb", features_size=reID_features_size)
 
     reid_controller = ReIDController(db=db, extractor=feature_extractor, crop_filter=crop_filter2)
 
@@ -59,18 +73,6 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
         detections1, frame1 = detector1.process_frame(frame1)
         detections2, frame2 = detector2.process_frame(frame2)
 
-        # #Modified orifinals
-        # print(f"Frame 1 detections: {orig_dets1}")
-        # print(f"Frame 2 detections: {orig_dets2}")
-        # # tracked detections
-        # print(f"Tracked Frame 1 detections: {detections1}")
-        # print(f"Tracked Frame 2 detections: {detections2}")
-        
-
-
-        # # Assign tracker IDs to original bboxes
-        # transfer_tracker_ids(detections1, orig_dets1)
-        # transfer_tracker_ids(detections2, orig_dets2)
 
         current_ids = reid_controller.get_all_ids()
 
@@ -88,10 +90,10 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
         db.add_features(features1, frame_id)
         
 
-        db.expire_old_features(frame_id, max_age=100)  # Keep features for X frames
+        db.expire_old_features(frame_id, max_age = features_expire)  # Keep features for X frames
 
 
-        results = reid_controller.match(crops2)
+        reid_controller.match(crops2)
         reid_controller.apply_to_detections(detections2)
 
 
@@ -118,4 +120,4 @@ if __name__ == "__main__":
     #run_demo("video1.avi", "video2.avi")
     args = parse_args()
 
-    run_demo(video_path1=args.video_path1, video_path2=args.video_path2, roi_path1=args.roi_path1, roi_path2=args.roi_path2, detection_model=args.detection_model_path, device=args.device, start_offset_frames=args.start_offset_frames)
+    run_demo(video_path1=args.video_path1, video_path2=args.video_path2, roi_path1=args.roi_path1, roi_path2=args.roi_path2, detection_model=args.detection_model_path, device=args.device, scnd_video_offset_frames=args.scnd_video_offset, reID_features_size=args.reID_features_size, debug=args.debug, features_expire=args.reID_features_expire, crop_zone_rows_1 = args.crop_zone_rows_vid1, crop_zone_cols_1 = args.crop_zone_cols_vid1, crop_zone_area_bottom_left_1 = args.crop_zone_area_bottom_left_vid1, crop_zone_area_top_right_1 = args.crop_zone_area_top_right_vid1, crop_zone_rows_2 = args.crop_zone_rows_vid2, crop_zone_cols_2 = args.crop_zone_cols_vid2, crop_zone_area_bottom_left_2 = args.crop_zone_area_bottom_left_vid2, crop_zone_area_top_right_2 = args.crop_zone_area_top_right_vid2)

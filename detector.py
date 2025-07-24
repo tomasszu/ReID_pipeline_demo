@@ -6,7 +6,7 @@ import os
 from supervision.detection.utils import box_iou_batch
 
 class VehicleDetector:
-    def __init__(self, video_path: str, class_ids=None, model_path="yolov8x.pt", device="cuda", roi_path=None, start_offset_frames: int = 0):
+    def __init__(self, model_path, device, video_path: str, class_ids=None, roi_path=None, start_offset_frames: int = 0):
         self.cap = cv2.VideoCapture(video_path)
         self.model = YOLO(model_path).to(device)
         self.tracker = sv.ByteTrack()
