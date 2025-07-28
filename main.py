@@ -61,6 +61,8 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
     visualizer1 = Visualizer(detector1.class_names)
     visualizer2 = Visualizer(detector2.class_names, traces=False)
 
+    writer = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'XVID'), original_fps, (2560, 720))
+
     while True:
         ret1, frame1 = detector1.read_frame()
         ret2, frame2 = detector2.read_frame()
@@ -107,12 +109,15 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
         #vis_frame1 = cv2.resize(vis_frame1, (1280, 720))
 
         cv2.imshow("Vehicle Re-ID Demo", combined)
-        if cv2.waitKey(0) & 0xFF == ord('q'):
+        writer.write(combined)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     detector1.release()
     detector2.release()
     cv2.destroyAllWindows()
+
+    writer.release()
 
     db.delete_table()  # Clean up the database table after demo
 

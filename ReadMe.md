@@ -1,13 +1,15 @@
 # Vehicle Re-Identification Pipeline
 
-This project implements a full pipeline for **vehicle re-identification** in real time using computer vision. The pipeline project simulates running the pipeline on two "live" video streams, where vehicles from the first video are re-identified to the second. It includes:
+This project implements a full pipeline for **vehicle re-identification** in real time using computer vision. The pipeline project simulates running the pipeline on any two "live" video streams, where vehicles from the first video are re-identified to the second. It includes:
 - Object detection (YOLO)
 - Tracking (ByteTrack)
-- Region-based vehicle crop filtering (Strategy to take snapshots of the vehicles in specific areas and specific amount times)
+- Region-based vehicle crop filtering (Strategy to take snapshots of the vehicles in specific areas and specific amount of times)
 - Feature extraction (custom and pretrained ReID model with ResNet-50 backbone)
 - Vector database with LanceDB
 - Re-identification matching
 - Visual analytics with frame annotation
+
+![](gif/reid_demo.gif)
 
 
 ---
