@@ -34,11 +34,13 @@ def parse_args():
     parser.add_argument('--crop_zone_area_bottom_left_vid2', type=tuple, default=(200, 900), help='Bottom-left corner of the crop zone area for the second video as a tuple (x, y).')
     parser.add_argument('--crop_zone_area_top_right_vid2', type=tuple, default=(1750, 320), help='Top-right corner of the crop zone area for the second video as a tuple (x, y).')
 
+    parser.add_argument('--play_mode', type=int, default=100, help='Delay between frames in milliseconds. Set to 0 for manual frame stepping (Pressing Enter for new frame).')
+
 
 
     return parser.parse_args()
 
-def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, device, scnd_video_offset_frames, reID_features_size, debug, features_expire, crop_zone_rows_1, crop_zone_cols_1, crop_zone_area_bottom_left_1, crop_zone_area_top_right_1, crop_zone_rows_2, crop_zone_cols_2, crop_zone_area_bottom_left_2, crop_zone_area_top_right_2):
+def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, device, scnd_video_offset_frames, reID_features_size, debug, features_expire, crop_zone_rows_1, crop_zone_cols_1, crop_zone_area_bottom_left_1, crop_zone_area_top_right_1, crop_zone_rows_2, crop_zone_cols_2, crop_zone_area_bottom_left_2, crop_zone_area_top_right_2, play_mode):
     """ Run the vehicle re-identification demo with two videos. 
     Args:
         video_path1 (str): Path to the first video file.
@@ -141,7 +143,7 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
 
 
         cv2.imshow("Vehicle Re-ID Demo", combined)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(play_mode) & 0xFF == ord('q'):
             break
 
     detector1.release()
@@ -155,4 +157,4 @@ if __name__ == "__main__":
     #run_demo("video1.avi", "video2.avi")
     args = parse_args()
 
-    run_demo(video_path1=args.video_path1, video_path2=args.video_path2, roi_path1=args.roi_path1, roi_path2=args.roi_path2, detection_model=args.detection_model_path, device=args.device, scnd_video_offset_frames=args.scnd_video_offset, reID_features_size=args.reID_features_size, debug=args.debug, features_expire=args.reID_features_expire, crop_zone_rows_1 = args.crop_zone_rows_vid1, crop_zone_cols_1 = args.crop_zone_cols_vid1, crop_zone_area_bottom_left_1 = args.crop_zone_area_bottom_left_vid1, crop_zone_area_top_right_1 = args.crop_zone_area_top_right_vid1, crop_zone_rows_2 = args.crop_zone_rows_vid2, crop_zone_cols_2 = args.crop_zone_cols_vid2, crop_zone_area_bottom_left_2 = args.crop_zone_area_bottom_left_vid2, crop_zone_area_top_right_2 = args.crop_zone_area_top_right_vid2)
+    run_demo(video_path1=args.video_path1, video_path2=args.video_path2, roi_path1=args.roi_path1, roi_path2=args.roi_path2, detection_model=args.detection_model_path, device=args.device, scnd_video_offset_frames=args.scnd_video_offset, reID_features_size=args.reID_features_size, debug=args.debug, features_expire=args.reID_features_expire, crop_zone_rows_1 = args.crop_zone_rows_vid1, crop_zone_cols_1 = args.crop_zone_cols_vid1, crop_zone_area_bottom_left_1 = args.crop_zone_area_bottom_left_vid1, crop_zone_area_top_right_1 = args.crop_zone_area_top_right_vid1, crop_zone_rows_2 = args.crop_zone_rows_vid2, crop_zone_cols_2 = args.crop_zone_cols_vid2, crop_zone_area_bottom_left_2 = args.crop_zone_area_bottom_left_vid2, crop_zone_area_top_right_2 = args.crop_zone_area_top_right_vid2, play_mode=args.play_mode)

@@ -23,3 +23,7 @@ nvidia-nccl-cu12==2.18.1
 nvidia-nvjitlink-cu12==12.2.140
 nvidia-nvtx-cu12==12.1.105
 lancedb==0.3.3
+
+# For Supervision
+defusedxml==0.7.1
+timm==0.9.8

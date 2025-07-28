@@ -207,7 +207,11 @@ class Detections:
             ```
         """  # noqa: E501 // docs
 
-        if ultralytics_results.obb is not None:
+        # ----------------------------------------------------------------------------------------------- EDIT
+        # EDIT to handle OBB results
+        # to prevent AttributeError: 'Results' object has no attribute 'obb'
+        if hasattr(ultralytics_results, "obb") and ultralytics_results.obb is not None:
+        #------------------------------------------------------------------------------------------------ EDIT
             class_id = ultralytics_results.obb.cls.cpu().numpy().astype(int)
             class_names = np.array([ultralytics_results.names[i] for i in class_id])
             oriented_box_coordinates = ultralytics_results.obb.xyxyxyxy.cpu().numpy()
