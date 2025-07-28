@@ -10,6 +10,26 @@ import torch.nn as nn
 from vehicle_reid.load_model import load_model_from_opts
 
 class ExtractingFeatures:
+    """A class to handle feature extraction from cropped vehicle images using a pre-trained model.
+    This class initializes the model, applies necessary transformations to the images, and extracts feature vectors.
+    It supports batch processing of images and can handle flipping images for data augmentation.
+    Attributes:
+        device (str): Device to run the model on (e.g., 'cpu', 'cuda').
+        model (nn.Module): The pre-trained model for feature extraction.
+        data_transforms (transforms.Compose): A series of transformations to apply to the images before feature extraction.
+    Methods:
+        __init__(device):
+            Initializes the ExtractingFeatures with the specified device and loads the pre-trained model.
+        fliplr(img):
+            Flips images horizontally in a batch.
+        extract_feature(model, X):
+            Extracts embeddings of a batch of image tensors X.
+            X should be of shape [B, C, H, W].
+        get_features_batch(obj_crop_list):
+            Accepts a list of (obj_id, crop) tuples and returns a list of (obj_id, feature_vector) tuples.
+        get_feature(image):
+            Accepts a single image and returns its feature vector.
+    """
     def __init__(self, device):
 
         self.device = device
@@ -71,6 +91,12 @@ class ExtractingFeatures:
 
     
     def get_feature(self, image):
+        """Accepts a single image and returns its feature vector.
+        Args:
+            image (np.ndarray): The input image to extract features from.
+        Returns:
+            np.ndarray: The feature vector extracted from the image.
+        """
 
         image = [image]
 

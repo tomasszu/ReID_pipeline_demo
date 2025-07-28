@@ -6,6 +6,12 @@ import os
 
 class LanceDBOperator:
     def __init__(self, db_path, table_name="vehicle_features", features_size=256):
+        """ Initializes the LanceDBOperator with the specified database path and table name.
+        Args:
+            db_path (str): Path to the LanceDB database directory.
+            table_name (str): Name of the table to store vehicle features.
+            features_size (int): Size of the feature vectors to be stored.
+        """
         self.db = lancedb.connect(db_path)
         self.db_path = db_path
         self.table_name = table_name
@@ -25,11 +31,11 @@ class LanceDBOperator:
             print(f"[LanceDB] Opened existing table '{table_name}'")
 
     def add_features(self, features_with_ids, frame_id: int):
-        """
+        """Adds a list of features to the LanceDB table.
         Args:
-            features_with_ids: List of tuples (vehicle_id: str/int, feature_vector: np.ndarray or list)
+            features_with_ids (list): List of tuples where each tuple contains (vehicle_id, feature_vector).
+            frame_id (int): The frame index when the features were extracted.
         """
-        
         if len(features_with_ids) == 0 or features_with_ids is None:
             return
         
@@ -46,6 +52,9 @@ class LanceDBOperator:
 
     def query_features(self, features_with_ids):
         """
+        Queries the LanceDB table for matching records based on the provided features.
+        This method searches for the closest matches to the provided feature vectors.
+        It returns a list of tuples containing the object ID, matched vehicle ID, and distance.
         Args:
             features_with_ids: List of tuples (vehicle_id: str/int, feature_vector: np.ndarray or list)
         
@@ -93,6 +102,11 @@ class LanceDBOperator:
             print(f"[LanceDB] Deleted database directory '{self.db_path}'")
 
     def expire_old_features(self, current_frame, max_age):
+        """Deletes features older than a certain number of frames.
+        Args:
+            current_frame (int): The current frame index.
+            max_age (int): The maximum age of features to keep in the database.
+        """
         try:
             self.table.delete(f"frame_added < {current_frame - max_age}")
             #print(f"[LanceDB] Deleted features older than {max_age} frames")

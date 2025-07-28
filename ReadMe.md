@@ -3,6 +3,7 @@
 This project implements a full pipeline for **vehicle re-identification** in real time using computer vision. The pipeline project simulates running the pipeline on any two "live" video streams, where vehicles from the first video are re-identified to the second. It includes:
 - Object detection (YOLO)
 - Tracking (ByteTrack)
+- Edited local version of the Supervision package
 - Region-based vehicle crop filtering (Strategy to take snapshots of the vehicles in specific areas and specific amount of times)
 - Feature extraction (custom and pretrained ReID model with ResNet-50 backbone)
 - Vector database with LanceDB
@@ -67,6 +68,11 @@ Requirements include:
     --crop_zone_area_bottom_left_vid2 200 900 \
     --crop_zone_area_top_right_vid2 1750 320
 ```
+
+3. **Stop the execution of the program**
+
+Quit by pressing `q`
+
 
 ## Command-line Arguments
 

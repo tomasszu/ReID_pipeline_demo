@@ -32,36 +32,66 @@ def parse_args():
     parser.add_argument('--crop_zone_rows_vid2', type=int, default=7, help='Number of rows in the crop zone grid for the second video.')
     parser.add_argument('--crop_zone_cols_vid2', type=int, default=6, help='Number of columns in the crop zone grid for the second video.')
     parser.add_argument('--crop_zone_area_bottom_left_vid2', type=tuple, default=(200, 900), help='Bottom-left corner of the crop zone area for the second video as a tuple (x, y).')
-    parser.add_argument('--crop_zone_area_top_right_vid2', type=tuple, default=(1750, 320), help='Top-right corner of the crop zone area for the second video as a tuple (x, y).')  
+    parser.add_argument('--crop_zone_area_top_right_vid2', type=tuple, default=(1750, 320), help='Top-right corner of the crop zone area for the second video as a tuple (x, y).')
+
+
 
     return parser.parse_args()
 
 def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, device, scnd_video_offset_frames, reID_features_size, debug, features_expire, crop_zone_rows_1, crop_zone_cols_1, crop_zone_area_bottom_left_1, crop_zone_area_top_right_1, crop_zone_rows_2, crop_zone_cols_2, crop_zone_area_bottom_left_2, crop_zone_area_top_right_2):
+    """ Run the vehicle re-identification demo with two videos. 
+    Args:
+        video_path1 (str): Path to the first video file.
+        video_path2 (str): Path to the second video file.
+        roi_path1 (str): Path to the ROI image for the first video.
+        roi_path2 (str): Path to the ROI image for the second video.
+        detection_model (str): Path to the YOLO model file.
+        device (str): Device to run the model on (e.g., "cuda" or "cpu").
+        scnd_video_offset_frames (int): Number of frames to delay processing the second video from the start of the first video.
+        reID_features_size (int): Size of the feature embeddings to be stored in the database.
+        debug (bool): Enable debug mode to visualize crop zones and other debug information.
+        features_expire (int): Number of frames after which the feature embeddings will be deleted from the database.
+        crop_zone_rows_1 (int): Number of rows in the crop zone grid for the first video.
+        crop_zone_cols_1 (int): Number of columns in the crop zone grid for the first video.
+        crop_zone_area_bottom_left_1 (tuple): Bottom-left corner of the crop zone area for the first video as a tuple (x, y).
+        crop_zone_area_top_right_1 (tuple): Top-right corner of the crop zone area for the first video as a tuple (x, y).
+        crop_zone_rows_2 (int): Number of rows in the crop zone grid for the second video.
+        crop_zone_cols_2 (int): Number of columns in the crop zone grid for the second video.
+        crop_zone_area_bottom_left_2 (tuple): Bottom-left corner of the crop zone area for the second video as a tuple (x, y).
+        crop_zone_area_top_right_2 (tuple): Top-right corner of the crop zone area for the second video as a tuple (x, y).
+    """
+    print("Starting vehicle re-identification demo...")
+
+    # Initialize the vehicle detectors for both videos
     detector1 = VehicleDetector(video_path=video_path1, roi_path=roi_path1, model_path=detection_model, device=device)
     detector2 = VehicleDetector(video_path=video_path2, roi_path=roi_path2, model_path=detection_model, device=device, start_offset_frames=scnd_video_offset_frames)
 
-    # Šis jāieliek kā arguments!!
-    original_fps = detector2.cap.get(cv2.CAP_PROP_FPS)
-    print(f"Original FPS: {original_fps}")
+    # # Šis jāieliek kā arguments!!
+    # original_fps = detector2.cap.get(cv2.CAP_PROP_FPS)
+    # print(f"Original FPS: {original_fps}")
 
-    frame_shape = detector1.cap.get(cv2.CAP_PROP_FRAME_HEIGHT), detector1.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-    frame_shape2 = detector2.cap.get(cv2.CAP_PROP_FRAME_HEIGHT), detector2.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-
-    # Initialize crop zone filter with the frame shape
+    # Set the crop zones for the first and second video
     crop_filter1 = CropZoneFilter(rows=crop_zone_rows_1, cols=crop_zone_cols_1, area_bottom_left= crop_zone_area_bottom_left_1, area_top_right=crop_zone_area_top_right_1, debug=debug)
     crop_filter2 = CropZoneFilter(rows=crop_zone_rows_2, cols=crop_zone_cols_2, area_bottom_left= crop_zone_area_bottom_left_2, area_top_right=crop_zone_area_top_right_2, debug=debug)
 
+
     feature_extractor = ExtractingFeatures(device=device)
 
+    
     db = LanceDBOperator("lancedb", features_size=reID_features_size)
 
+    # Initialize the ReID controller with the database and feature extractor
+    # The ReID controller will handle the matching and tracking of vehicles across frames
+    # It will also apply the matched IDs to the detections in the second video
+    # The controller will use the feature extractor to get features from the crops and match them against the database
+    # The controller will also handle the expiration of old features in the database
+    # The controller will use the crop filters to filter and crop the detections before extracting features
     reid_controller = ReIDController(db=db, extractor=feature_extractor, crop_filter=crop_filter2)
 
-
+    # Initialize the visualizers for both videos
+    # The visualizers will annotate the frames with the detections and matched IDs
     visualizer1 = Visualizer(detector1.class_names)
     visualizer2 = Visualizer(detector2.class_names, traces=False)
-
-    writer = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'XVID'), original_fps, (2560, 720))
 
     while True:
         ret1, frame1 = detector1.read_frame()
@@ -71,10 +101,9 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
             print("End of video stream.")
             break
 
-        # getting original and tracked detections
+        # Process the frames from both videos
         detections1, frame1 = detector1.process_frame(frame1)
         detections2, frame2 = detector2.process_frame(frame2)
-
 
         current_ids = reid_controller.get_all_ids()
 
@@ -86,7 +115,9 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
         crops1 = crop_filter1.get_crops()
         crops2 = crop_filter2.get_crops()
 
+
         frame_id = detector1.get_current_frame_index()
+
 
         features1 = feature_extractor.get_features_batch(crops1)
         db.add_features(features1, frame_id)
@@ -103,13 +134,13 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
         vis_frame1 = visualizer1.annotate(frame1, detections1)
         vis_frame2 = visualizer2.annotate(frame2, detections2)
 
+        # Combine the visualized frames from both videos for display
+        # The combined frame will show the detections and matched IDs from both videos side by side
         combined = cv2.hconcat([vis_frame1, vis_frame2])
         combined = cv2.resize(combined, (2560, 720))
 
-        #vis_frame1 = cv2.resize(vis_frame1, (1280, 720))
 
         cv2.imshow("Vehicle Re-ID Demo", combined)
-        writer.write(combined)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
@@ -117,7 +148,6 @@ def run_demo(video_path1, video_path2, roi_path1, roi_path2, detection_model, de
     detector2.release()
     cv2.destroyAllWindows()
 
-    writer.release()
 
     db.delete_table()  # Clean up the database table after demo
 

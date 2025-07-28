@@ -1,7 +1,17 @@
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath("supervision"))
+""" The Supervision library is used for object detection and tracking. And this demo contains an edited version of the library to retain information about the original bounding boxes of the detections.
+This allows us to visualize the original detections before they were altered by the tracker and kalman filter.
+This is useful for visualization and further processing."""
 import supervision as sv
-import cv2
 
 class Visualizer:
+    """A class for visualizing vehicle tracking and ReID results.
+    This class provides methods to annotate frames with bounding boxes, labels, and traces of tracked vehicles.
+    It uses the supervision library for annotations and supports custom class names and trace drawing.
+    """
     def __init__(self, class_names: dict, traces=True):
         self.box_annotator = sv.BoundingBoxAnnotator()
         self.label_annotator = sv.LabelAnnotator()

@@ -1,6 +1,35 @@
 import cv2
 
 class CropZoneFilter:
+    """A class to filter and crop detections based on defined zones in a video frame.
+    This class allows for the definition of multiple zones in a video frame and filters detections based on their location within these zones.
+    If enabled it acts as a filter to only accept detections that fall within the defined zones. This reduces noise and focuses on specific areas of interest.
+    A vehicle is saved (for feature extraction) once every time it enters a new crop zone. The crop zones are defined by the user and can be adjusted based on the video frame size.
+    The class can also to visualizes the zones and the center points of the detections.
+    After filtering it crops the detected objects from the frame and stores them for further processing.
+    A Vehicle Will never be saved fro cropping out if it has never entered a single defined crop zone. Alternatively, if the zone logic is disabled, all detections are cropped regardless of their location in every single frame anew.
+    Attributes:
+        rows (int): Number of rows to divide the frame into zones.
+        cols (int): Number of columns to divide the frame into zones.
+        area_bottom_left (tuple): Coordinates of the bottom-left corner of the area to crop (x_min, y_max).
+        area_top_right (tuple): Coordinates of the top-right corner of the area to crop (x_max, y_min).
+        debug (bool): If True, enables debug drawing on the frame.
+        _pending_crops (list): List to hold cropped images for the current frame.
+        zone_of_detections (dict): Dictionary to track which zone each detection belongs to.
+    Methods:
+        __init__(rows, cols, area_bottom_left, area_top_right, debug=True):
+            Initializes the CropZoneFilter with the specified parameters.
+        _generate_zones():
+            Generates the zones based on the specified rows and columns within the defined area.
+        _zone_of_point(point):
+            Determines the zone index for a given point in the frame.
+        _draw_debug(frame, center_points):
+            Draws the zones and center points on the frame for debugging purposes.
+        filter_and_crop(frame, detections, current_ids=None):
+            Filters detections based on their location within the defined zones and crops the detected objects from the frame.
+        get_crops():
+            Returns the list of cropped images for the current frame.
+    """
     def __init__(self, rows=None, cols=None,
                  area_bottom_left = None, area_top_right=None, debug=True):
         self.rows = rows
@@ -34,6 +63,10 @@ class CropZoneFilter:
 
 
     def _generate_zones(self):
+        """Generates the zones based on the specified rows and columns within the defined area.
+        Returns:
+            list: A list of tuples representing the zones, each defined by its top-left and bottom-right coordinates.
+        """
         x_min, y_max = self.area_bottom_left
         x_max, y_min = self.area_top_right
 
@@ -52,6 +85,12 @@ class CropZoneFilter:
         return zones
 
     def _zone_of_point(self, point):
+        """Determines the zone index for a given point in the frame.
+        Args:
+            point (tuple): A tuple representing the coordinates of the point (x, y).
+        Returns:
+            int: The index of the zone that contains the point, or -1 if the point is not within any zone.
+        """
         x, y = point
         for idx, (x1, y1, x2, y2) in enumerate(self.zones):
             if x1 <= x <= x2 and y1 <= y <= y2:
@@ -59,6 +98,11 @@ class CropZoneFilter:
         return -1
 
     def _draw_debug(self, frame, center_points):
+        """Draws the zones and center points on the frame for debugging purposes.
+        Args:
+            frame (np.ndarray): The frame on which to draw the debug information.
+            center_points (list): List of center points of the detections to be drawn.
+        """
         for zone in self.zones:
             x1, y1, x2, y2 = zone
             cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 1)
@@ -66,13 +110,15 @@ class CropZoneFilter:
             cv2.circle(frame, center, 4, (0, 0, 255), -1)
 
     def filter_and_crop(self, frame, detections, current_ids=None):
-        """
+        """Filters detections based on their location within the defined zones and crops the detected objects from the frame.
+        It checks if the detection is within a zone and crops it accordingly.
         Args:
-            frame: current frame
-            detections: list of tuples (xyxy, class_id, conf, cls_name, tracker_id)
-
+            frame (np.ndarray): The input frame from which to crop the detections.
+            detections (sv.Detections): The detected vehicles in the frame, with tracking information.
+            current_ids (dict, optional): A dictionary mapping object IDs to their current tracking IDs.
+                If None, it will not filter based on current IDs.
         Returns:
-            filtered_detections: detections that are accepted (based on zone logic or unconditionally)
+            list: A list of filtered detections that are within the defined zones.
         """
         if current_ids is None:
             current_ids = {}
@@ -131,4 +177,8 @@ class CropZoneFilter:
         return filtered
 
     def get_crops(self):
+        """Returns the list of cropped images for the current frame.
+        Returns:
+            list: A list of tuples where each tuple contains the object ID and the corresponding cropped image.
+        """
         return self._pending_crops
