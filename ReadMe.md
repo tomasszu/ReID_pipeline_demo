@@ -141,6 +141,7 @@ If vehicles in the second video appear after a delay, use `--scnd_video_offset` 
 
 ## 🔧 Project Structure
 
+```
 ├── main.py # Main demo script
 ├── detector.py # VehicleDetector class (YOLO + ByteTrack)
 ├── cropZoneFilter.py # CropZoneFilter class for area-specific crops
@@ -150,6 +151,7 @@ If vehicles in the second video appear after a delay, use `--scnd_video_offset` 
 ├── visualizer.py # Annotates frames with detection + tracking + ReID
 ├── videos/ # Input videos and ROI masks
 └── requirements.txt # Python dependencies
+```
 
 ## 🧠 Core Components
 
